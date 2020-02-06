@@ -22,21 +22,29 @@ logger = logging.getLogger('RFIDReader')
 # logger.addHandler(c_handler)
 
 
+def on_message(payload, message, db_conn):
+    print(f'RECEIVED: {payload} {db_conn}')
+    # message.ack()
+
+
 if __name__ == "__main__":
     logger.info('Application bootstrapped')
 
     try:
+        # db_conn
         # Create a mq worker
         logger.info('Initiating MQ consumer...')
         mq_config = config.get('rabbit_mq')
         worker = BaseSyncConsumer(
             mq_config.get('host'), mq_config.get('port'),
             mq_config.get('credential'), vhost=mq_config.get('vhost'),
-            exchange_name=mq_config.get('exchange_name'))
+            exchange_name=mq_config.get('exchange_name'),
+            # db_conn=db_conn,
+            queue_name='turnstile',
+            callbacks=[on_message])
         logger.info('Successfully connected to rabbitmq server')
 
-        with worker.establish_connection() as conn:
-            worker.run()
+        worker.run()
     except IOError as e:
         if e.errno == 111:
             logger.error('Unable to connect to the rabbitmq server')

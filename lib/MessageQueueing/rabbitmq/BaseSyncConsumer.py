@@ -1,4 +1,4 @@
-from kombu import Connection, Exchange, Queue
+from kombu import Connection, Exchange, Queue, Consumer
 from kombu.mixins import ConsumerMixin
 from typing import NamedTuple
 
@@ -12,21 +12,18 @@ class URL(NamedTuple):
     vhost: str
 
 
-exchange: Exchange = Exchange('rfid_events', type='fanout')
-queue: Queue = Queue('turnstile', exchange)
-
-
 class BaseSyncConsumer(ConsumerMixin):
 
-    def __init__(self, host, port, credential, *args, **kwargs):
+    def __init__(self, host, port, credential, queue_name, *args, **kwargs):
         exchange_name = kwargs.get('exchange_name', 'test_exchange')
         vhost = kwargs.get('vhost', '/')
         self.url: URL = URL('amqp', credential.get('username'),
                             credential.get('password'), host, port, vhost)
-        # self.establish_connection()
-        # self.create_channel()
-        # self.create_exchange(exchange_name)
-        # self.create_queue('turnstile')
+        self.callbacks = kwargs.get('callbacks')
+        self.establish_connection()
+        self.create_exchange(exchange_name)
+        self.create_queue(queue_name)
+        # self.db_conn
 
     def establish_connection(self):
         self.connection: Connection = Connection(
@@ -36,28 +33,28 @@ class BaseSyncConsumer(ConsumerMixin):
             hostname=self.url.host,
             port=self.url.port,
             virtual_host=self.url.vhost)
-        
-        return self.connection
+        self.connection.connect()
 
-    def create_channel(self):
-        self.channel = self.connection.channel()
+        return self.connection
 
     def create_exchange(self, exhcange_name, exchange_type='fanout'):
         self.exchange: Exchange = Exchange(
-            exhcange_name, exchange_type)
-        # self.exchange.declare()
+            exhcange_name, exchange_type, self.connection.channel())
+        self.exchange.declare()
 
     def create_queue(self, queue_name=''):
-        self.queue: Queue = Queue(
-            queue_name, exchange=self.exchange)
-        self.queue.declare()
-
-    def get_consumers(self, Consumer, channel):
-        return [
-            Consumer([queue],
-                     callbacks=[self.on_message], accept=['json'])
+        self.queues: List[Queue] = [
+            Queue(queue_name, exchange=self.exchange),
         ]
 
-    def on_message(self, payload, message):
-        print(f'RECEIVED: ${payload}')
-        message.ack()
+    def get_consumers(self, _, channel):
+        default_channel = self.connection.default_channel
+        return [
+            # Consumer(default_channel, self.queues,
+            #          callbacks=self.callbacks, accept=['json'])
+            Consumer(default_channel, self.queues,
+                     on_message=self.on_message, accept=['json'])
+        ]
+
+    def on_message(self, message):
+        self.callbacks[0](message.decode(), message, {'extra': 'args'})
