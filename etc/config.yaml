@@ -1,0 +1,22 @@
+spoof_tolerance:
+  duration: 10 # seconds
+
+timezone: "Asia/Manila"
+
+redis:
+  host: "localhost"
+  port: 6379
+
+rabbit_mq:
+  vhost: "/"
+  host: "localhost"
+  port: 5672
+  exchange_name: rfid_events
+  credential:
+    username: rfreaders
+    password: rfreaders
+
+pcd: # Proximity Coupling Device
+  vendor: "08FF"
+  product: "0009"
+  serial: "08FF20140315"
