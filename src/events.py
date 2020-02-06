@@ -35,7 +35,8 @@ if __name__ == "__main__":
             exchange_name=mq_config.get('exchange_name'))
         logger.info('Successfully connected to rabbitmq server')
 
-        worker.run()
+        with worker.establish_connection() as conn:
+            worker.run()
     except IOError as e:
         if e.errno == 111:
             logger.error('Unable to connect to the rabbitmq server')
