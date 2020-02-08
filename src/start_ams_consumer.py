@@ -7,8 +7,8 @@ from datetime import datetime
 from lib.MessageQueueing.rabbitmq.BaseSyncConsumer import BaseSyncConsumer
 
 
-stream = open('./etc/config.yaml', 'r')
-config = yaml.load(stream, Loader=Loader)
+yml_handle = open('./etc/config.yaml', 'r')
+config = yaml.load(yml_handle, Loader=Loader)
 
 FORMAT = '%(name)-10s <%(levelname)s>: %(asctime)s - %(message)s'
 DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S%z'
@@ -22,16 +22,15 @@ logger = logging.getLogger('RFIDReader')
 # logger.addHandler(c_handler)
 
 
-def on_message(payload, message, db_conn):
-    print(f'RECEIVED: {payload} {db_conn}')
-    # message.ack()
+def on_message(payload, message, *args, **kwargs):
+    print(f'Saving in DB {payload}')
+    message.ack()
 
 
 if __name__ == "__main__":
     logger.info('Application bootstrapped')
 
     try:
-        # db_conn
         # Create a mq worker
         logger.info('Initiating MQ consumer...')
         mq_config = config.get('rabbit_mq')
@@ -39,8 +38,7 @@ if __name__ == "__main__":
             mq_config.get('host'), mq_config.get('port'),
             mq_config.get('credential'), vhost=mq_config.get('vhost'),
             exchange_name=mq_config.get('exchange_name'),
-            # db_conn=db_conn,
-            queue_name='turnstile',
+            queue_name='attendance_system',
             callbacks=[on_message])
         logger.info('Successfully connected to rabbitmq server')
 

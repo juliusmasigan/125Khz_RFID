@@ -13,8 +13,8 @@ from datetime import datetime
 from lib.MessageQueueing.rabbitmq.BaseSyncPublisher import BaseSyncPublisher
 
 
-stream = open('./etc/config.yaml', 'r')
-config = yaml.load(stream, Loader=Loader)
+yaml_handle = open('./etc/config.yaml', 'r')
+config = yaml.load(yaml_handle, Loader=Loader)
 
 FORMAT = '%(name)-10s <%(levelname)s>: %(asctime)s - %(message)s'
 DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S%z'

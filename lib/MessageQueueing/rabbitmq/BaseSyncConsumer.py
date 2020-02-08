@@ -2,6 +2,8 @@ from kombu import Connection, Exchange, Queue, Consumer
 from kombu.mixins import ConsumerMixin
 from typing import NamedTuple
 
+from typing import List
+
 
 class URL(NamedTuple):
     transport: str
@@ -23,7 +25,6 @@ class BaseSyncConsumer(ConsumerMixin):
         self.establish_connection()
         self.create_exchange(exchange_name)
         self.create_queue(queue_name)
-        # self.db_conn
 
     def establish_connection(self):
         self.connection: Connection = Connection(
@@ -50,11 +51,17 @@ class BaseSyncConsumer(ConsumerMixin):
     def get_consumers(self, _, channel):
         default_channel = self.connection.default_channel
         return [
-            # Consumer(default_channel, self.queues,
-            #          callbacks=self.callbacks, accept=['json'])
             Consumer(default_channel, self.queues,
-                     on_message=self.on_message, accept=['json'])
+                     callbacks=self.callbacks, accept=['json'])
         ]
 
+        # return [
+        #     For passing extra args to the callbacks
+        #     Consumer(default_channel, self.queues,
+        #              on_message=self.on_message, accept=['json'])
+        # ]
+
+    # Manually call the callbacks to pass additional args
     def on_message(self, message):
-        self.callbacks[0](message.decode(), message, {'extra': 'args'})
+        for callback in self.callbacks:
+            callback(message.decode(), message, {'extra': 'args'})
